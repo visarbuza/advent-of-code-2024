@@ -6,6 +6,13 @@ const down = [1, 0];
 const left = [0, -1];
 const directionOrder = [up, right, down, left];
 
+const directionToString = (direction) => {
+  if (direction[0] === -1 && direction[1] === 0) return "up";
+  if (direction[0] === 0 && direction[1] === 1) return "right";
+  if (direction[0] === 1 && direction[1] === 0) return "down";
+  if (direction[0] === 0 && direction[1] === -1) return "left";
+}
+
 const rotateRight = (direction) => {
   const currentIndex = directionOrder.findIndex(
     (dir) => dir[0] === direction[0] && dir[1] === direction[1],
@@ -24,11 +31,7 @@ const inMap = (map, x, y) => {
 function getPath(position, map) {
   let direction = up;
   const path = new Set();
-  let steps = 0;
   while (true) {
-    if (steps > 8000) {
-      break;
-    }
     const row = position[0] + direction[0];
     const col = position[1] + direction[1];
     const currentKey = `${position[0]},${position[1]}`;
@@ -44,10 +47,36 @@ function getPath(position, map) {
 
     path.add(currentKey);
     position = [row, col];
-    steps++;
   }
-  return {path, steps};
+  return path;
 };
+
+function hasLoop(position, map) {
+  let direction = up;
+  const path = new Set();
+  while (true) {
+    const row = position[0] + direction[0];
+    const col = position[1] + direction[1];
+    // If we have already visited this position and direction, we have a loop
+    const currentKey = `${position[0]},${position[1]},${directionToString(direction)}`;
+    if (path.has(currentKey)) {
+      return true;
+    }
+
+    if (!inMap(map, row, col)) {
+      path.add(currentKey);
+      break;
+    }
+    if (map[row][col] === "#") {
+      direction = rotateRight(direction);
+      continue;
+    }
+
+    path.add(currentKey);
+    position = [row, col];
+  }
+  return false;
+}
 
 try {
   // Read entire file as a string
@@ -58,27 +87,23 @@ try {
     .map((line) => line.split(""));
 
 
-  let initialPosition = undefined;
   let position = undefined;
   outerLoop: for (let row = 0; row < map.length; row++)
     for (let col = 0; col < map[row].length; col++)
       if (map[row][col] === "^") {
         position = [row, col];
-        initialPosition = [row, col];
         break outerLoop;
       }
 
-  let { path } = getPath(position, map);
-  path = Array.from(path);
+  let path  = Array.from(getPath(position, map));
 
   let n = 0;
   for (let i = 1; i < path.length; i++) {
-    const [x, y] = path[i].split(",").map(Number);
+    const [x, y,] = path[i].split(",").map(Number);
     map[x][y] = "#";
     
-    const { steps } = getPath(position, map);
-    if (steps >= 8000) {
-      n++
+    if (hasLoop(position, map)) {
+      n++;;
     }
     
     map[x][y] = ".";
